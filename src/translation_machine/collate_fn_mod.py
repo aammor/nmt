@@ -32,7 +32,6 @@ def get_collate_fn(max_length_src,max_length_dst):
 
         #convert to tensors
         res =  src_id_tokens_batchs,dst_id_tokens_batchs,src_lengths,dst_lengths
-        # import pdb;pdb.set_trace()
         res = [torch.tensor(el) for el in res]
         
         return res

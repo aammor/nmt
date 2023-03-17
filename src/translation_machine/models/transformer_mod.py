@@ -28,12 +28,9 @@ class TransformerForSeq2Seq(nn.Module):
         self.linear = nn.Linear(d_model,self.vocab_tgt_size)
 
     def forward(self,src_id_tokens_batchs,tgt_id_tokens_batchs,src_lengths,tgt_lengths):
-        """
-           index_target_for_pred : 
-           index of target to predict which implies to mask all the indexes starting from this one
-
-        """
-        assert tgt_id_tokens_batchs[0] == self.vocab_tgt_size["<sos>"] 
+        # import pdb;pdb.set_trace()
+        with torch.no_grad():
+            assert int(torch.unique(tgt_id_tokens_batchs[:,0])) == 1
         # the first token should always be the 'start of sequence' token whereas we are in
         # train or eval mode
         
@@ -54,9 +51,12 @@ class TransformerForSeq2Seq(nn.Module):
 
         if self.train:            
             #apply the decoder:
-
-            out_decoder = self.transformer_decoder(embeddings_tgt,memory=encoder_output)
-
+            import pdb;pdb.set_trace()
+            for idx_limit in range(1,embeddings_tgt.shape[1]):
+                mask = torch.tensor([1 if idx <idx_limit else 0 for idx in range(10)],dtype=torch.int32)
+                out_decoder = self.transformer_decoder(embeddings_tgt,memory=encoder_output,tgt_mask=mask)
+                import pdb;pdb.set_trace()
+            
             out_transformer = self.linear(out_decoder)
 
             outputs["decoder"] = out_transformer
