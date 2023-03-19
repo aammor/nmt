@@ -7,12 +7,15 @@ class DatasetFromTxt(Dataset):
     """
         class that read a list of pairs of translation from a text file, and 
     """
-    def __init__(self,source_file) -> None:
+    def __init__(self,source_file,limit_length=None) -> None:
         """
         we assume each sentence an it's translation, and realted comment are on the same line, and separated by a "\t" symbol,
         The first two blocks of text are respectively for the source and target language
         """
         self.source_file = source_file
+
+        assert isinstance(limit_length,int) or limit_length is None
+        self.limit_length = limit_length
 
     def __getitem__(self,idx):
         if not(idx < len(self)):
@@ -24,8 +27,11 @@ class DatasetFromTxt(Dataset):
 
     @lru_cache
     def __len__(self):
-        num_lines = sum(1 for _ in open(self.source_file))
-        return num_lines
+        if self.limit_length is None:
+            num_lines = sum(1 for _ in open(self.source_file))
+            return num_lines
+        else:
+            return self.limit_length            
 
 
 

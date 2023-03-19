@@ -87,8 +87,8 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
     #     return (el for el in (self._list_of_tokens,self.proba))
 
 
-english_tokenizer = get_tokenizer('spacy', language='en')
-french_tokenizer = get_tokenizer('spacy', language='fr')
+english_tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+french_tokenizer = get_tokenizer('spacy', language='fr_core_news_sm')
 
 
 path_language_info = str(dir_file.joinpath("../../models/language_info.pth"))

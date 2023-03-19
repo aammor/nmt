@@ -38,10 +38,11 @@ class ModelTrainer:
 
 
     def update_metric(self,batch_processing_out):
-        preds_as_tokens = batch_processing_out["preds_as_tokens"]
-        targets_as_tokens = batch_processing_out["targets_as_tokens"]
-        targets_as_tokens = [[el] for el in targets_as_tokens]
-        self.metric.update((preds_as_tokens,targets_as_tokens))
+        preds_tokens = batch_processing_out["preds_tokens"]
+        targets_tokens = batch_processing_out["targets_tokens"]
+        targets_tokens = [[el] for el in targets_tokens]
+        # import pdb;pdb.set_trace()
+        self.metric.update((preds_tokens,targets_tokens))
 
     def process_batch(self,batch):
         """
@@ -50,29 +51,21 @@ class ModelTrainer:
         """
         try:
             batch[:2] = [el.to(self.device) for el in batch[:2]]
-            # import pdb;pdb.set_trace()
             out_model = self.model(*batch)
-            en_id_tokens_batchs,fr_id_tokens_batchs,en_lengths,fr_lengths = batch
             
-            
-            decoder_output = out_model["decoder"]
-            fr_id_tokens_batch_pred_truncated = [fr_id_tokens_instance[1:length] for (fr_id_tokens_instance,length) in zip(fr_id_tokens_batchs,fr_lengths)]
-            out_model_instance_pred_truncated = [out_model_instance[:length-1] for (out_model_instance,length) in zip(decoder_output,fr_lengths)]
 
-            preds_before_softmax = torch.concat(out_model_instance_pred_truncated,axis=0)
-            targets_tokens = torch.concat(fr_id_tokens_batch_pred_truncated)
-            loss = self.loss_fn(preds_before_softmax,targets_tokens) #temp fix (replace by self.batch_size*max_length)
+            # import pdb;pdb.set_trace()
+            preds = out_model["preds"]
+            targets_tokens = out_model["targets"]
+            loss = self.loss_fn(preds,targets_tokens) #temp fix (replace by self.batch_size*max_length)
             nb_words = len(targets_tokens)
 
 
-            preds_as_tokens = [[int(el) for el in  torch.argmax(el,axis=1)] for el in out_model_instance_pred_truncated]
-            targets_as_tokens = [[int(el) for el in el1] for el1 in fr_id_tokens_batch_pred_truncated]
-            # import pdb;pdb.set_trace()
             out = dict()
             out["loss"] = loss
             out["nb_words"] = nb_words
-            out["preds_as_tokens"] = preds_as_tokens            
-            out["targets_as_tokens"] = targets_as_tokens            
+            out["preds_tokens"] = out_model["token_preds_instance_separated"]          
+            out["targets_tokens"] = out_model["token_targets_instance_separated"]
         except Exception as e:#exception handler that must be checked later
             print(e)
             raise LossNoneComputed

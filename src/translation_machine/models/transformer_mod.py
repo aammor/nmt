@@ -2,6 +2,8 @@
 from torch import nn
 import math,torch
 
+from . import common
+
 
 class TransformerForSeq2Seq(nn.Module):
     def __init__(self,d_model,vocab_src,vocab_tgt):
@@ -49,29 +51,52 @@ class TransformerForSeq2Seq(nn.Module):
         outputs["sequence_lengths"] = tgt_lengths
         outputs["last_states_encoder"] = encoder_output
 
-        if self.train:            
-            #apply the decoder:
-            import pdb;pdb.set_trace()
-            for idx_limit in range(1,embeddings_tgt.shape[1]):
-                mask = torch.tensor([1 if idx <idx_limit else 0 for idx in range(10)],dtype=torch.int32)
-                out_decoder = self.transformer_decoder(embeddings_tgt,memory=encoder_output,tgt_mask=mask)
-                import pdb;pdb.set_trace()
-            
-            out_transformer = self.linear(out_decoder)
+        #apply the decoder:
+        max_tgt_length = embeddings_tgt.shape[1] # on the batch
+        #for each tokan input (in the form of embeddings), we use (in the context of teacher-forcing) only the indexes located
+        # before the token or equal to this token, thus we mask the toekns situated after the current toekn
+        tgt_mask = torch.tensor([[idx_j>idx_i for idx_j in range(max_tgt_length)] for idx_i in range(max_tgt_length)],dtype=torch.bool,device="cuda")
+        out_decoder = self.transformer_decoder(embeddings_tgt,memory=encoder_output,tgt_mask=tgt_mask)
+    
 
-            outputs["decoder"] = out_transformer
+        if self.traininig:
+            # the sentence begin with sos_token and ends with eos token, 
+            # the tokens from the first token to eos token excluded are given as input (their  embeddings to the transformer) 
+            # the tokens from the second token to eos token included are the target tokens
+
+            targets_tokens_for_model = [tgt_sentence_tokens[1:tgt_sentence_length]  for (tgt_sentence_tokens,tgt_sentence_length) in zip(tgt_id_tokens_batchs,tgt_lengths)]
+            targets_tokens_for_model = torch.concat(targets_tokens_for_model)
+    
+            # import pdb;pdb.set_trace()
+
+            predictions_lengths = [int(el)-1 for el in tgt_lengths] 
+            # we remove the last token (the eos token),because, 
+            # obviously, we don't need to make preidction once the sentence is over, this the offset between the length of predictions
+            # and the length of each target sequence eof the batch
+
+            # we compute the predictions, ont token at a time, until the eos token
+            out_decoder = [out_decoder_instance[:length] for out_decoder_instance,length in zip(out_decoder,predictions_lengths)]
+            out_decoder = torch.concat(out_decoder)
+            out_transformer = self.linear(out_decoder)
+            
+            outputs["preds"] = out_transformer
+            outputs["targets"] = targets_tokens_for_model
+            with torch.no_grad():
+
+                concatenated_tokenized_preds = torch.argmax(outputs["preds"],axis=1)
+
+                outputs["token_preds_instance_separated"] = common.divide_into_sublist(concatenated_tokenized_preds,predictions_lengths)
+                outputs["token_targets_instance_separated"] = common.divide_into_sublist(outputs["targets"],predictions_lengths)
+
         else:
-
-            out_decoder = torch.stack([a[b-1] for a,b in zip(out_transformer,sequence_lengths)])
-            
+            import pdb;pdb.set_trace()
+            out_decoder = torch.stack([out_decoder_instance[length-2] for out_decoder_instance,length in zip(out_decoder,tgt_lengths)])  
             out_transformer = self.linear(out_decoder)
             
-            outputs["decoder_last"] = out_transformer
-        
-        import pdb;pdb.set_trace()
-        # outputs["decoder_last"] = 
+            outputs["preds"] = out_transformer
 
-        return res
+
+        return outputs
 
 
 class PositionalEncoding(nn.Module):
