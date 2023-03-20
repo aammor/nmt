@@ -17,9 +17,9 @@ def get_collate_fn(max_length_src,max_length_dst):
 
             src_length = len(src_sentence)
             dst_length = len(dst_sentence)
-
-            dst_length_with_bordering_token = dst_length + 2
-            assert (src_length <= max_length_src) and (dst_length <= max_length_dst)
+            
+            # dst_length_with_bordering_token = dst_length + 2
+            # assert (src_length <= max_length_src) and (dst_length <= max_length_dst)
 
             id_token_src = src_sentence.pad(target=max_length_src)
             id_token_dst = dst_sentence.pad(target=max_length_dst)
@@ -28,7 +28,7 @@ def get_collate_fn(max_length_src,max_length_dst):
             src_id_tokens_batchs.append(id_token_src)
             dst_id_tokens_batchs.append(id_token_dst)
             src_lengths.append(src_length)
-            dst_lengths.append(dst_length_with_bordering_token) 
+            dst_lengths.append(dst_length) 
 
         #convert to tensors
         res =  src_id_tokens_batchs,dst_id_tokens_batchs,src_lengths,dst_lengths

@@ -30,7 +30,8 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
             return res
 
         def __init__(self,sentence) -> None:
-            self._list_of_tokens = self._tokenizer(sentence)
+            _list_of_tokens = self._tokenizer(sentence)
+            self._list_of_tokens = self._complete(_list_of_tokens) # add sos and eos token is it is a destination language
             self._list_of_tokens_as_int = self.to_int(self._list_of_tokens)
 
         @property
@@ -44,27 +45,22 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
             return len(self._list_of_tokens)
         
         def pad(self,target):
-            padded_list_of_tokens = self._list_of_tokens_as_int
-            if self._is_destination_language:
-                padded_list_of_tokens = [self.vocab['<sos>']] + padded_list_of_tokens + [self.vocab['<eos>']]
-            padded_list_of_tokens = padded_list_of_tokens + [self.vocab['<unk>']]* (target - len(self._list_of_tokens))
-            assert len(padded_list_of_tokens) == target + (2 if self._is_destination_language else 0)
+            padded_list_of_tokens = self._list_of_tokens_as_int + [self.vocab['<unk>']]* (target - len(self._list_of_tokens))
+            # assert len(padded_list_of_tokens) == target + (2 if self._is_destination_language else 0)
             return padded_list_of_tokens
         
-        def complete(self):
-            assert self._is_destination_language,"valid only when the sentence is from the target language"
-            padded_list_of_tokens = [self.vocab['<sos>']] + self._list_of_tokens_as_int + [self.vocab['<eos>']]
-            return padded_list_of_tokens
-
-        def is_complete(self):
+        def _complete(self,_list_of_tokens):
             if self._is_destination_language:
-                return self._list_of_tokens[-1] == self.vocab["<eos>"]
+                completed_list_of_tokens = ['<sos>'] + _list_of_tokens + ['<eos>']
             else:
-                raise ValueError(f"function is_complete should be called only if self._is_destination_language if True")
-
+                completed_list_of_tokens = _list_of_tokens
+            return completed_list_of_tokens
         def __str__(self) -> str:
             res = " ".join(self.as_words)
             return res
+        
+        def __repr__(self) -> str:
+            return str(self)
 
     
         @property
@@ -73,9 +69,9 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
 
         @property
         def as_int(self):
-            tokens_list = self.to_int(self._list_of_tokens)
+            tokens_list = self._list_of_tokens_as_int
             return tokens_list
-
+        
     return Sentence
 
 

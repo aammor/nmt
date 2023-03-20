@@ -3,7 +3,25 @@ from translation_machine.sentence_mod import FrenchSentence
 
 DstSentence = FrenchSentence
 
+
 class Translator:
+    def __init__(self,model) -> None:
+        self.model = model
+        self.model.eval()
+    def __call__(self,src_sentence,limit_sentence = np.inf):
+        tokens_list_src_int = src_sentence.as_int
+        tokens_list_dst_int = [DstSentence.vocab['<sos>']]    
+        current_id_dst = tokens_list_dst_int[-1]
+        predictions = {"last_states_encoder":None}
+        # is computed and updated only after the first iteration, it doesn't
+        # change and is passed through the while loop
+        while (current_id_dst != DstSentence.vocab['<eos>'] and len(tokens_list_dst_int)<limit_sentence ):
+            predictions = self.model.predict(tokens_list_src_int,tokens_list_dst_int,last_states_encoder=predictions["last_states_encoder"])
+            current_id_dst = int(predictions["next_token"])
+            tokens_list_dst_int.append(current_id_dst)
+        return DstSentence.from_token_int(tokens_list_dst_int)
+
+class TranslatorOld:
     """src to german translator using a trained NLP model"""
 
     def __init__(self,model,beam_search_width=3):
