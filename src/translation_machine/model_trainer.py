@@ -51,7 +51,7 @@ class ModelTrainer:
         """
         try:
             batch[:2] = [el.to(self.device) for el in batch[:2]]
-            out_model = self.model(*batch)
+            out_model = self.model(batch)
             
 
             # import pdb;pdb.set_trace()
@@ -73,7 +73,7 @@ class ModelTrainer:
             return out 
         
     @loss_none_computed_handler
-    def train_on_batch(self,batch,batch_idx):
+    def train_on_batch(self,batch,batch_idx=None):
         self.optimizer.zero_grad()
         out = self.process_batch(batch)
         loss,nb_words = out["loss"],out["nb_words"]
@@ -85,7 +85,7 @@ class ModelTrainer:
         return loss,nb_words
 
     @loss_none_computed_handler
-    def validate_on_batch(self,batch,batch_idx):
+    def validate_on_batch(self,batch,batch_idx=None):
         out = self.process_batch(batch)
         loss,nb_words = out["loss"],out["nb_words"]
         # print(float(loss),batch_idx)
@@ -123,5 +123,6 @@ class ModelTrainer:
         metric_value = self.metric.compute()
         return losses,nb_words_per_batch,metric_value
     
-    
+    def find_optimal_learning_rate(self):
+        pass
 

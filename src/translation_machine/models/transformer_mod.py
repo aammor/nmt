@@ -32,7 +32,7 @@ class TransformerForSeq2Seq(nn.Module):
 
         self.linear = nn.Linear(d_model,self.vocab_tgt_size)
 
-    def forward(self,src_id_tokens_batchs,tgt_id_tokens_batchs,src_lengths,tgt_lengths,last_states_encoder=None):
+    def forward(self,batch,last_states_encoder=None):
         """ the model takes as input tensor specifying as batch of pair of sentence in forms of tokens
              (src_id_tokens_batchs,tgt_id_tokens_batchs),all the sentences are represented in the form of sequence of ints 
              (each int representing the index of the tokens on the associated language), and each sentence is completed 
@@ -61,6 +61,8 @@ class TransformerForSeq2Seq(nn.Module):
         Returns:
             _type_: _description_
         """
+        # import pdb;pdb.set_trace()
+        src_id_tokens_batchs,tgt_id_tokens_batchs,src_lengths,tgt_lengths = batch
         outputs = dict()
         # import pdb;pdb.set_trace()
         with torch.no_grad():
