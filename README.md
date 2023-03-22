@@ -1,2 +1,2 @@
 # translation_machine
-code to  create a translation machine from scratch using pytorch
+repository for training and testing od multiple model for neural machine translation, on various dataset
