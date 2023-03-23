@@ -2,7 +2,7 @@ from setuptools import setup,find_packages
 
 
 setup(
-	name='main',
+	name='nmt',
 	version='1.0',
 	description='a python package for translation between two languages',
 	author='Amine AMMOR',
