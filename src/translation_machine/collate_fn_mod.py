@@ -20,7 +20,7 @@ def get_collate_fn(max_length_src,max_length_dst):
             
             # dst_length_with_bordering_token = dst_length + 2
             # assert (src_length <= max_length_src) and (dst_length <= max_length_dst)
-
+            # import pdb;pdb.set_trace()
             id_token_src = src_sentence.pad(target=max_length_src)
             id_token_dst = dst_sentence.pad(target=max_length_dst)
             
@@ -32,6 +32,7 @@ def get_collate_fn(max_length_src,max_length_dst):
 
         #convert to tensors
         res =  src_id_tokens_batchs,dst_id_tokens_batchs,src_lengths,dst_lengths
+        # import pdb;pdb.set_trace()
         res = [torch.tensor(el) for el in res]
         
         return res
