@@ -2,7 +2,7 @@
 
 """
 from torch import nn
-import math,torch
+import math,torch,itertools
 
 from . import common
 
@@ -156,7 +156,8 @@ class TransformerForSeq2Seq(nn.Module):
         
         src_lengths = torch.tensor([len(el) for el in src_id_tokens_batchs]).to(self.device).unsqueeze(0)
         tgt_lengths = torch.tensor([len(el) for el in tgt_id_tokens_batchs]).to(self.device).unsqueeze(0)
-        outputs_model = self(src_id_tokens_batchs,tgt_id_tokens_batchs,src_lengths,tgt_lengths,last_states_encoder=last_states_encoder)
+        batch = batch = [src_id_tokens_batchs,tgt_id_tokens_batchs,src_lengths,tgt_lengths]
+        outputs_model = self(batch,last_states_encoder=last_states_encoder)
         predicted_token = torch.argmax(outputs_model["preds_last"])
         outputs = dict()
         outputs["next_token"] = predicted_token
