@@ -96,8 +96,8 @@ class TransformerForSeq2Seq(nn.Module):
         max_tgt_length = tgt_id_tokens_batchs.shape[1] # on the batch
         max_src_length = src_id_tokens_batchs.shape[1] # on the batch
         batch_size = src_id_tokens_batchs.shape[0]
-        #for each tokan input (in the form of embeddings), we use (in the context of teacher-forcing) only the indexes located
-        # before the token or equal to this token, thus we mask the toekns situated after the current toekn
+        #for each token input (in the form of embeddings), we use  only the indexes located
+        # before the token
         tgt_mask = torch.tensor([[idx_j>idx_i for idx_j in range(max_tgt_length)] for idx_i in range(max_tgt_length)],dtype=torch.bool,device="cuda")
 
         memory_mask = torch.tensor([[[idx_j>src_lengths[idx_batch] for idx_j in range(max_src_length)] for _ in range(max_tgt_length)] for idx_batch in range(batch_size)],dtype=torch.bool,device="cuda")
