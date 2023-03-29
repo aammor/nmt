@@ -8,7 +8,7 @@ from dev import module_io
 
 @dataclass
 class NameSpaceAggregation:
-    def __init__(self,namespace,) -> None:
+    def __init__(self,namespace) -> None:
         """_summary_
 
         Args:
@@ -54,13 +54,13 @@ class NameSpaceAggregation:
         elif isinstance(el,(int,float,bool,str)):
             state_dict =  el
         else:
-            raise ValueError(f"type of argument {el} of argument cannot be saved for the moment")
+            raise ValueError(f"type  {type(el)} of argument cannot be saved for the moment")
         return state_dict
     
     @classmethod
     def _convert_to_nested_namespace(cls,el):
         if type(el) ==  dict:
-            if set(el.keys()) == {'func','args','keywords'}:
+            if set(el.keys()) == {'func','args','keywords'}:# the stored element if a callable to be loaded
                 func_as_strs = el['func']
                 args = el['args']
                 keywords = el['keywords']
@@ -70,14 +70,17 @@ class NameSpaceAggregation:
                 assert isinstance(args,tuple),'args must points to a tuple of (positionnal) arguments'
                 assert isinstance(keywords,dict),'keywords must points to a dictionnary of keywords arguments'
                 func = module_io.get_callable(*func_as_strs)
-                namespace = partial(func,*args,**keywords)     
+                namespace = partial(func,*args,**keywords)
+            elif all([type(el1)==str  for el1 in el.values()]) and "root" in el.keys(): # the stored element is a set of paths to be loaded
+                # import pdb;pdb.set_trace()
+                namespace = Paths(**el)
             else:
                 namespace = Namespace(**{key:cls._convert_to_nested_namespace(val) 
                             for (key,val) in el.items()})
         elif isinstance(el,(int,float,bool,str)):
             namespace =  el
         else:
-            raise ValueError(f"type of argumen {el} of argument cannot be converted to namespace for the moment")
+            raise ValueError(f"type  {type(el)} of argument cannot be converted to namespace for the moment")
         return namespace      
 
     
@@ -85,15 +88,17 @@ class NameSpaceAggregation:
 class Paths(Namespace):
     def __init__(self,**kwargs):
         self.as_dict = kwargs.copy()
-        assert "root" in kwargs,"root must be given with the paths"
-        self.as_dict["root"] = str(Path(self.as_dict["root"]).resolve())
+        self.root_path_key = "root"
+        assert self.root_path_key in kwargs,"root must be given with the paths"
+        self.as_dict[self.root_path_key] = str(Path(self.as_dict[self.root_path_key]).resolve())
 
-        self.root = kwargs.pop("root")
+        self.root = kwargs.pop(self.root_path_key)
         kwargs = {key:Path(self.root).joinpath(val).absolute() for key,val in kwargs.items()}
         for _,val in kwargs.items():
             assert val.exists(),f"path {val} doesn't exists"
         kwargs = {key:str(val) for (key,val) in kwargs.items()}
         super(Paths,self).__init__(**kwargs)
+
 
 # paths = Paths(
 #     root = "../..",
