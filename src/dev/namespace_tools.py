@@ -90,12 +90,13 @@ class Paths(Namespace):
         self.as_dict = kwargs.copy()
         self.root_path_key = "root"
         assert self.root_path_key in kwargs,"root must be given with the paths"
+        assert Path(kwargs[self.root_path_key]).exists(),"root must be an existing path"
         self.as_dict[self.root_path_key] = str(Path(self.as_dict[self.root_path_key]).resolve())
 
         self.root = kwargs.pop(self.root_path_key)
         kwargs = {key:Path(self.root).joinpath(val).absolute() for key,val in kwargs.items()}
         for _,val in kwargs.items():
-            assert val.exists(),f"path {val} doesn't exists"
+            assert val.parent.exists(),f"path {val} doesn't exists"
         kwargs = {key:str(val) for (key,val) in kwargs.items()}
         super(Paths,self).__init__(**kwargs)
 
