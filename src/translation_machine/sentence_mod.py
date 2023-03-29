@@ -26,12 +26,18 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language,limit_to_
 
         @classmethod
         def from_token_int(cls,tokens_int):
-            sentence = " ".join(cls.vocab.itos_[idx] for idx in tokens_int if cls.vocab.itos_[idx] not in ['<unk>','<sos>','<eos>'])
-            res = cls(sentence)
+            sentence_as_tokens = [cls.vocab.itos_[idx] for idx in tokens_int]
+            sentence_as_tokens  = [token for token in sentence_as_tokens]
+            res = cls(sentence_as_tokens) #Remark: " ".join does not reverse the tokenizer operator
             return res
 
         def __init__(self,sentence) -> None:
-            _list_of_tokens = self._tokenizer(sentence)
+            if isinstance(sentence,str):
+                _list_of_tokens = self._tokenizer(sentence)
+            elif isinstance(sentence,list) and all([isinstance(el,str) for el in sentence]):
+                _list_of_tokens = sentence
+            else:
+                raise ValueError("sentence must be a str of a list of tokens")
             # add sos and eos token is it is a destination language
             self._list_of_tokens = self._complete(_list_of_tokens)
             self._list_of_tokens_as_int = self.to_int(self._list_of_tokens)
