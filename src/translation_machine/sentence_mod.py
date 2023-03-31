@@ -27,7 +27,7 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language,limit_to_
         @classmethod
         def from_token_int(cls,tokens_int):
             sentence_as_tokens = [cls.vocab.itos_[idx] for idx in tokens_int]
-            sentence_as_tokens  = [token for token in sentence_as_tokens]
+            sentence_as_tokens  = [token for token in sentence_as_tokens if not(token in ['<unk>','<sos>','<eos>'])]
             res = cls(sentence_as_tokens) #Remark: " ".join does not reverse the tokenizer operator
             return res
 
