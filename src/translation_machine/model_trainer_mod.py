@@ -25,17 +25,17 @@ def loss_none_computed_handler(func):
     return inner_function
 
 
-class ModelTrainer:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    def __init__(self,model,optimizer,train_data_loader,val_data_loader,loss_fn):
+class ModelTrainer:    
+    def __init__(self,model,optimizer,train_data_loader,val_data_loader,loss_fn,device):
+        self.device = device
         self.model = model.to(self.device)
         self.optimizer = optimizer
         # self.scheduler = scheduler
         self.train_data_loader = train_data_loader
         self.val_data_loader = val_data_loader
         self.loss_fn = loss_fn
-        # self.metric =  Bleu()
+        self.device = device
+        # self.metric =  Bleu() 
 
 
     def update_metric(self,batch_processing_out):
@@ -74,11 +74,13 @@ class ModelTrainer:
         
     @loss_none_computed_handler
     def train_on_batch(self,batch,batch_idx=None):
+        # import pdb;pdb.set_trace()
         self.optimizer.zero_grad()
         out = self.process_batch(batch)
         loss,nb_words = out["loss"],out["nb_words"]
         # print(float(loss),batch_idx)
         loss.backward()
+        # import pdb;pdb.set_trace()
         self.optimizer.step()
 
         # self.update_metric(out)
