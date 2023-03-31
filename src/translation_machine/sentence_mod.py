@@ -6,17 +6,18 @@ from pathlib import Path
 
 dir_file = Path(__file__).parent
 
-def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
+def _create_sentence_type(vocabulary,tokenizer,is_destination_language,limit_to_vocab=True):
     """each  """
     class Sentence:
         """
-            class that represents a sentence in a language whose vacabulary is specified by 'vocab',
+            class that represents a sentence in a language whose vocabulary is specified by 'vocab',
             in a tokenized form
             set as attribute of class
         """
         vocab = vocabulary
         _is_destination_language = is_destination_language
         _tokenizer = tokenizer
+        _limit_to_vocab = limit_to_vocab
         @classmethod
         def to_int(cls,tokens):
             """convert tokens to int using the vocabulary"""
@@ -25,14 +26,23 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
 
         @classmethod
         def from_token_int(cls,tokens_int):
-            sentence = " ".join(cls.vocab.itos_[idx] for idx in tokens_int if cls.vocab.itos_[idx] not in ['<unk>','<sos>','<eos>'])
-            res = cls(sentence)
+            sentence_as_tokens = [cls.vocab.itos_[idx] for idx in tokens_int]
+            sentence_as_tokens  = [token for token in sentence_as_tokens if not(token in ['<unk>','<sos>','<eos>'])]
+            res = cls(sentence_as_tokens) #Remark: " ".join does not reverse the tokenizer operator
             return res
 
         def __init__(self,sentence) -> None:
-            _list_of_tokens = self._tokenizer(sentence)
-            self._list_of_tokens = self._complete(_list_of_tokens) # add sos and eos token is it is a destination language
+            if isinstance(sentence,str):
+                _list_of_tokens = self._tokenizer(sentence)
+            elif isinstance(sentence,list) and all([isinstance(el,str) for el in sentence]):
+                _list_of_tokens = sentence
+            else:
+                raise ValueError("sentence must be a str of a list of tokens")
+            # add sos and eos token is it is a destination language
+            self._list_of_tokens = self._complete(_list_of_tokens)
             self._list_of_tokens_as_int = self.to_int(self._list_of_tokens)
+            # show only the token recognized by the wocabulary
+            self._list_of_tokens_on_vocab = [self.vocab.itos_[el] for el in self._list_of_tokens_as_int]
 
         @property
         def list_of_tokens_as_int(self):
@@ -56,7 +66,10 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
                 completed_list_of_tokens = _list_of_tokens
             return completed_list_of_tokens
         def __str__(self) -> str:
-            res = " ".join(self.as_words)
+            if self._limit_to_vocab:
+                res = " ".join(self.as_words_from_vocab)
+            else:
+                res = " ".join(self.as_words)
             return res
         
         def __repr__(self) -> str:
@@ -66,7 +79,10 @@ def _create_sentence_type(vocabulary,tokenizer,is_destination_language):
         @property
         def as_words(self):
             return self._list_of_tokens
-
+        @property
+        def as_words_from_vocab(self):
+            return self._list_of_tokens_on_vocab
+        
         @property
         def as_int(self):
             tokens_list = self._list_of_tokens_as_int

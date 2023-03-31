@@ -8,11 +8,18 @@ class Translator:
     def __init__(self,model) -> None:
         self.model = model
         self.model.eval()
-    def __call__(self,src_sentence,limit_sentence = np.inf):
+
+    def init_translation(self,src_sentence):
         tokens_list_src_int = src_sentence.as_int
         tokens_list_dst_int = [DstSentence.vocab['<sos>']]    
-        current_id_dst = tokens_list_dst_int[-1]
         predictions = {"last_states_encoder":None}
+        predictions = self.model.predict(tokens_list_src_int,tokens_list_dst_int,last_states_encoder=predictions["last_states_encoder"])
+        return predictions,tokens_list_src_int,tokens_list_dst_int
+        
+    def __call__(self,src_sentence,limit_sentence = np.inf):
+        predictions,tokens_list_src_int,tokens_list_dst_int = self.init_translation(src_sentence)
+        current_id_dst = tokens_list_dst_int[-1]
+
         # is computed and updated only after the first iteration, it doesn't
         # change and is passed through the while loop
         while (current_id_dst != DstSentence.vocab['<eos>'] and len(tokens_list_dst_int)<limit_sentence ):
@@ -20,6 +27,10 @@ class Translator:
             current_id_dst = int(predictions["next_token"])
             tokens_list_dst_int.append(current_id_dst)
         return DstSentence.from_token_int(tokens_list_dst_int)
+
+class Translation:
+    def __init__(self) -> None:
+        pass
 
 class TranslatorOld:
     """src to german translator using a trained NLP model"""

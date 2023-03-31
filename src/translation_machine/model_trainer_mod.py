@@ -1,6 +1,6 @@
 from itertools import islice
 from torch import optim
-import torch
+import torch,itertools
 import numpy as np
 # from ignite.metrics.nlp import Bleu
 import time
@@ -25,17 +25,17 @@ def loss_none_computed_handler(func):
     return inner_function
 
 
-class ModelTrainer:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    def __init__(self,model,optimizer,scheduler,train_data_loader,val_data_loader,loss_fn):
+class ModelTrainer:    
+    def __init__(self,model,optimizer,train_data_loader,val_data_loader,loss_fn,device):
+        self.device = device
         self.model = model.to(self.device)
         self.optimizer = optimizer
-        self.scheduler = scheduler
+        # self.scheduler = scheduler
         self.train_data_loader = train_data_loader
         self.val_data_loader = val_data_loader
         self.loss_fn = loss_fn
-        # self.metric =  Bleu()
+        self.device = device
+        # self.metric =  Bleu() 
 
 
     def update_metric(self,batch_processing_out):
@@ -74,11 +74,13 @@ class ModelTrainer:
         
     @loss_none_computed_handler
     def train_on_batch(self,batch,batch_idx=None):
+        # import pdb;pdb.set_trace()
         self.optimizer.zero_grad()
         out = self.process_batch(batch)
         loss,nb_words = out["loss"],out["nb_words"]
         # print(float(loss),batch_idx)
         loss.backward()
+        # import pdb;pdb.set_trace()
         self.optimizer.step()
 
         # self.update_metric(out)
@@ -104,7 +106,6 @@ class ModelTrainer:
             if loss is not(None):
                 losses.append(loss)
                 nb_words_per_batch.append(nb_words)
-        self.scheduler.step()
         # metric_value = self.metric.compute()
         metric_value = None
         return losses,nb_words_per_batch,metric_value
@@ -125,30 +126,47 @@ class ModelTrainer:
         metric_value = None
         return losses,nb_words_per_batch,metric_value
     
-    def find_optimal_learning_rate(self,min_lr_search,max_lr_search,size_experiments_step=100,cycle_schedule=5):
-        # start = time.time()
-        # min_lr_search = 10**(-7)
-        # max_lr_search = 10.0
-        # size_experiments_step = 100
-        # cycle_schedule = 5
+    def reset_optimizer(self):
+        self.optimizer = self.optimizer.__class__(self.model.parameters(), **self.optimizer.defaults)
+          
 
-        gamma = np.exp(np.log(max_lr_search/min_lr_search)/(size_experiments_step/cycle_schedule))
-        optimizer = torch.optim.NAdam(self.model.parameters(), lr=min_lr_search)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer,gamma=gamma)
+    def set_learning_rate(self,lr):
+        for g in self.optimizer.param_groups:
+            g['lr'] = lr
+            
+    def lr_range_test(self,min_lr_search,max_lr_search,size_experiments_step,cycle_schedule,method):
+        
+        total_iters_schedule = size_experiments_step//cycle_schedule
 
-        cyclic_shuffled_train_data_loader = (el  for _ in range(size_experiments_step//len(train_data_loader)) for el in train_data_loader)
+        self.reset_optimizer()
 
-        indexed_cyclic_shuffled_train_data_loader = enumerate(cyclic_shuffled_train_data_loader)
-        losses_lr_finder = []
+        if method=="exponential":
+            self.set_learning_rate(min_lr_search)
+            gamma = np.exp(np.log(max_lr_search/min_lr_search)/total_iters_schedule)
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer,gamma=gamma)
+        elif method == "linear":
+            self.set_learning_rate(max_lr_search)
+            start_factor = max_lr_search/min_lr_search
+            scheduler = torch.optim.lr_scheduler.LinearLR(self.optimizer,start_factor=start_factor,end_factor=1.0,total_iters = total_iters_schedule)
+        else:
+            raise ValueError
+
+        # iterate over the train_data_loader, while shuffling at each epoch , for a certain number of iteratiosn
+        cyclic_shuffled_train_data_loader = (el  for _ in itertools.count(start=0,step=1) for el in train_data_loader)
+        cyclic_shuffled_train_data_loader = itertools.islice(cyclic_shuffled_train_data_loader,size_experiments_step)
+
+
+        losses_lr = []
         lrs = []
-        for idx,batch in indexed_cyclic_shuffled_train_data_loader:
+
+        for idx,batch in enumerate(cyclic_shuffled_train_data_loader):
+            print(idx)
             loss,nb_words = model_trainer.train_on_batch(batch)
             loss = float(loss)
             if idx%cycle_schedule==0:
                 print(idx,scheduler.get_last_lr())
                 scheduler.step()
             print(loss/nb_words,scheduler.get_last_lr())
-            losses_lr_finder.append(loss/nb_words)
+            losses_lr.append(loss/nb_words)
             lrs.append(scheduler.get_last_lr())
-            
-        # stop = time.time()
+        return losses_lr,lrs
